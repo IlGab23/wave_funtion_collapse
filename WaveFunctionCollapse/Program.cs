@@ -16,35 +16,59 @@ Dictionary<char, Biome> mapBiome = new Dictionary<char, Biome>()
 (int x, int y) pos = (-1, -1);
 int entropy = 0;
 
-char[,] matrix = new char[11, 11];
+char[,] charMatrix = new char[11, 11];
+int[,] entropyMatrix = new int[11, 11];
 
 if ((pos.x == -1 && pos.y == -1) && entropy == 0)
 {
-    int centerY = matrix.GetLength(0) / 2;
-    int centerX = matrix.GetLength(1) / 2;
+    int centerY = charMatrix.GetLength(0) / 2;
+    int centerX = charMatrix.GetLength(1) / 2;
 
     char[] options = mapBiome.Keys.ToArray();
 
     Random rnd = new Random();
 
     int pickedBiome = rnd.Next(options.Length);
-    matrix[centerY, centerX] = options[pickedBiome];
+    charMatrix[centerY, centerX] = options[pickedBiome];
 }
 
-for (int i = 0; i < matrix.GetLength(0); i++)
+for (int i = 0; i < entropyMatrix.GetLength(0); i++)
 {
-    for (int j = 0; j < matrix.GetLength(1); j++)
+    for (int j = 0; j < entropyMatrix.GetLength(1); j++)
     {
-        if (matrix[i, j] == '\0')
+        if (charMatrix[i, j] == '\0')
+        {
+            entropyMatrix[i, j] = 4;
+        }
+    }
+}
+
+for (int i = 0; i < charMatrix.GetLength(0); i++)
+{
+    for (int j = 0; j < charMatrix.GetLength(1); j++)
+    {
+        if (charMatrix[i, j] == '\0')
         {
             Console.Write("|-|");
         }
         else
         {
-            Console.ForegroundColor = mapBiome[matrix[i, j]].Color;
-            Console.Write($"|{matrix[i, j]}|");
+            Console.ForegroundColor = mapBiome[charMatrix[i, j]].Color;
+            Console.Write($"|{charMatrix[i, j]}|");
             Console.ResetColor();
         }
+    }
+
+    Console.WriteLine();
+}
+
+for (int i = 0; i < entropyMatrix.GetLength(0); i++)
+{
+    for (int j = 0; j < entropyMatrix.GetLength(1); j++)
+    {
+        Console.ForegroundColor = ConsoleColor.White;
+        Console.Write($"|{entropyMatrix[i, j]}|");
+        Console.ResetColor();
     }
 
     Console.WriteLine();
