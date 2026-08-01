@@ -67,42 +67,43 @@ public static class UtilitiesFuncions
         return changes;
     }
 
-    public static bool ForceCollapseNewTile(ref List<char>[,] charMatrix, ref List<(int y, int x)> pos, bool searchForTile)
+    public static bool ForceCollapseNewTile(ref List<char>[,] charMatrix, ref List<(int y, int x)> pos)
     {
-        Random rnd = new Random();
+        // Heuristic Search /////////////////////////////////////////////
+        int minEntropy = int.MaxValue;
+        List<(int y, int x)> bestCells = new();
 
-        Console.WriteLine($"POS COUNT IN FORCECOLLAPSE: {pos.Count}");
-        Console.WriteLine($"FLAG IN FORCECOLLAPSE: {searchForTile}");
-
-        if (searchForTile && pos.Count == 0)
+        for (int i = 0; i < charMatrix.GetLength(0); i++)
         {
-
-            Console.WriteLine("ENTERED THE FIND NEW TILE SYSTEM");
-            for (int i = 0; i < charMatrix.GetLength(0); i++)
+            for (int j = 0; j < charMatrix.GetLength(0); j++)
             {
-                for (int j = 0; j < charMatrix.GetLength(0); j++)
-                {
-                    if (charMatrix[i, j].Count == 1) continue;
+                int entropy = charMatrix[i, j].Count;
 
-                    pos.Add((i, j));
+                if (entropy <= 1) continue;
+
+                if (entropy < minEntropy)
+                {
+                    minEntropy = entropy;
+                    bestCells.Clear();
+                    bestCells.Add((i, j));
+                }
+                else if (entropy == minEntropy)
+                {
+                    bestCells.Add((i, j));
                 }
             }
-
-            return false;
         }
+        // Heuristic Search /////////////////////////////////////////////
 
-        int pickedPosIndex = rnd.Next(pos.Count);
-        int posY = pos[pickedPosIndex].y;
-        int posX = pos[pickedPosIndex].x;
+        if (bestCells.Count == 0) return true;
 
-        int entropy = charMatrix[posY, posX].Count;
+        Random rnd = new Random();
 
-        if (entropy == 1)
-        {
-            pos.Clear();
-            return true;
-        }
-        int pickedBiomeIndex = rnd.Next(entropy);
+        var pickedCell = bestCells[rnd.Next(bestCells.Count)];
+        int posY = pickedCell.y;
+        int posX = pickedCell.x;
+
+        int pickedBiomeIndex = rnd.Next(minEntropy);
         char biomeSelected = charMatrix[posY, posX][pickedBiomeIndex];
 
         charMatrix[posY, posX].RemoveAll(bio => bio != biomeSelected);
@@ -110,7 +111,7 @@ public static class UtilitiesFuncions
         pos.Clear();
         pos.Add((posY, posX));
 
-        return true;
+        return false;
     }
 
     public static void SetupEntropyMatrix(ref List<char>[,] charMatrix, ref List<(int y, int x)> pos)

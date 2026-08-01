@@ -17,18 +17,13 @@ List<char>[,] charMatrix = new List<char>[matrixSize, matrixSize];
 
 UtilitiesFuncions.SetupEntropyMatrix(ref charMatrix, ref positions);
 
-bool searchForNewTile = false;
+bool fullTiled = false;
 
 while (true)
 {
     int tilesAdded = 0;
     Console.Clear();
 
-    if (positions.Count > 0)
-    {
-        int minEntropyValue = positions.Min(pos => charMatrix[pos.y, pos.x].Count);
-        positions.RemoveAll(pos => charMatrix[pos.y, pos.x].Count != minEntropyValue);
-    }
     int posCount = positions.Count;
     // Console.WriteLine($"BEFORE FIRST DELAY: POS => {posCount}");
     // Thread.Sleep(1000);
@@ -40,7 +35,6 @@ while (true)
 
         if (newTiles.Count == 0)
         {
-            searchForNewTile = true;
             // positions.Clear();
             // Console.WriteLine($"SEARCH FOR NEW TILE FLAG INSIDE FOR ==> {searchForNewTile}");
             // Thread.Sleep(5000);
@@ -76,14 +70,13 @@ while (true)
     /// </summary>
 
     Console.WriteLine($"Cicli per gen:{cicles}");
-    Console.WriteLine($"SEARCH FOR NEW TILE FLAG ==> {searchForNewTile}");
     Console.WriteLine($"N° of pos:{posCount}");
     Console.WriteLine("BEFORE SECOND DELAY");
 
     if (tilesAdded == 0)
     {
-        searchForNewTile = UtilitiesFuncions.ForceCollapseNewTile(ref charMatrix, ref positions, searchForNewTile);
-        if (positions.Count == 0 && !searchForNewTile) break;
+        fullTiled = UtilitiesFuncions.ForceCollapseNewTile(ref charMatrix, ref positions);
+        if (fullTiled) break;
         // break;
     }
     else
