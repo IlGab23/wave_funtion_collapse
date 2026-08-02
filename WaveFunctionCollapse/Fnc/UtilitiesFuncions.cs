@@ -4,31 +4,48 @@ namespace WaveFunctionCollapse.Fnc;
 
 public static class UtilitiesFuncions
 {
-    public static List<(int y, int x)> EditNearTiles(int y, int x, int startRow, ref List<char>[,] charMatrix)
+    public static void EditNearTiles(int y, int x, ref List<char>[,] charMatrix)
     {
-        List<(int y, int x)> pos = new();
+        (int dy, int dx)[] directions = { (-1, 0), (1, 0), (0, -1), (0, 1) };
 
-        if (startRow > (y + 1)) return pos;
-        int startPosX = x - 1;
+        Queue<(int y, int x)> propagationQueue = new();
+        propagationQueue.Enqueue((y, x));
 
-        for (int i = startPosX; i < (startPosX + 3); i++)
+        while (propagationQueue.Count > 0)
         {
-            if ((startRow >= 0 && startRow < charMatrix.GetLength(0)) && (i >= 0 && i < charMatrix.GetLength(1)))
-            {
-                if (startRow == y && i == x) continue;
-                bool changes = GetTileEntropy(ref charMatrix, startRow, i);
-                // charMatrix[startRow, i] = BiomeDef.GetRandomTile();
+            var currentCell = propagationQueue.Dequeue();
+            int cy = currentCell.y;
+            int cx = currentCell.x;
 
-                if (charMatrix[startRow, i].Count < 4 && changes)
+            foreach (var dir in directions)
+            {
+                int neighborY = cy + dir.dy;
+                int neighborX = cx + dir.dx;
+
+                if ((neighborY >= 0 && neighborY < charMatrix.GetLength(0)) &&
+                    neighborX >= 0 && neighborX < charMatrix.GetLength(1))
                 {
-                    pos.Add((startRow, i));
+                    bool optionsRemoved = ReduceEntropy(cy, cx, neighborY, neighborX, ref charMatrix);
+
+                    if (optionsRemoved)
+                    {
+                        propagationQueue.Enqueue((neighborY, neighborX));
+                    }
                 }
             }
         }
+    }
 
-        pos.AddRange(EditNearTiles(y, x, startRow + 1, ref charMatrix));
+    public static bool ReduceEntropy(int currentY, int currentX, int neighborY, int neighborX, ref List<char>[,] charMatrix)
+    {
+        if (charMatrix[currentY, currentX].Count != 1) return false;
 
-        return pos;
+        char currentCellChar = charMatrix[currentY, currentX][0];
+        char[] notAllowed = BiomeDef.mapBiome[currentCellChar].NotAllowedBiomeChar;
+
+        int biomesRemoved = charMatrix[neighborY, neighborX].RemoveAll(bio => notAllowed.Contains(bio));
+
+        return biomesRemoved > 0;
     }
 
 
@@ -75,7 +92,7 @@ public static class UtilitiesFuncions
 
         for (int i = 0; i < charMatrix.GetLength(0); i++)
         {
-            for (int j = 0; j < charMatrix.GetLength(0); j++)
+            for (int j = 0; j < charMatrix.GetLength(1); j++)
             {
                 int entropy = charMatrix[i, j].Count;
 

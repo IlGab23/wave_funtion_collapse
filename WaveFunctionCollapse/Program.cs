@@ -1,7 +1,9 @@
 
-using WaveFunctionCollapse.Domain;
+using System.Diagnostics;
 using WaveFunctionCollapse.Fnc;
 
+Stopwatch sw = new();
+sw.Start();
 int cicles = 0;
 const int matrixSize = 31;
 
@@ -18,10 +20,12 @@ List<char>[,] charMatrix = new List<char>[matrixSize, matrixSize];
 UtilitiesFuncions.SetupEntropyMatrix(ref charMatrix, ref positions);
 
 bool fullTiled = false;
+int tilesAdded = 0;
+
+int forceCollapseMethodCalls = 0;
 
 while (true)
 {
-    int tilesAdded = 0;
     Console.Clear();
 
     int posCount = positions.Count;
@@ -29,29 +33,7 @@ while (true)
     // Thread.Sleep(1000);
     cicles++;
 
-    for (int i = 0; i < posCount; i++)
-    {
-        var newTiles = UtilitiesFuncions.EditNearTiles(positions[i].y, positions[i].x, positions[i].y - 1, ref charMatrix);
-
-        if (newTiles.Count == 0)
-        {
-            // positions.Clear();
-            // Console.WriteLine($"SEARCH FOR NEW TILE FLAG INSIDE FOR ==> {searchForNewTile}");
-            // Thread.Sleep(5000);
-            break;
-        }
-
-        foreach (var tile in newTiles)
-        {
-            // Verifichiamo se il tile è già presente nella lista per evitare duplicati
-            if (!positions.Contains(tile))
-            {
-                positions.Add(tile);
-                tilesAdded++;
-                continue;
-            }
-        }
-    }
+    UtilitiesFuncions.EditNearTiles(positions[0].y, positions[0].x, ref charMatrix);
 
 
     UtilitiesFuncions.PrintTiles(ref charMatrix, true);
@@ -64,26 +46,14 @@ while (true)
     // }
     // Console.ResetColor();
 
-    /// <summary>
-    /// L'ARLGORITMO SI BLOCCA SU UN TILE DURANTE IL PROCESSO: DA CAPIRE SE E' PER UN ERRORE LOGICO OPPURE BISOGNA AGGIUNGERE
-    /// UNO SBLOCCO SELEZIONANDO UN'ALTRA CASELLA DISPOLIBILE PER IL COLLASSO
-    /// </summary>
-
     Console.WriteLine($"Cicli per gen:{cicles}");
     Console.WriteLine($"N° of pos:{posCount}");
     Console.WriteLine("BEFORE SECOND DELAY");
 
-    if (tilesAdded == 0)
-    {
-        fullTiled = UtilitiesFuncions.ForceCollapseNewTile(ref charMatrix, ref positions);
-        if (fullTiled) break;
-        // break;
-    }
-    else
-    {
-        positions.RemoveRange(0, posCount);
-    }
-    Thread.Sleep(100);
+    fullTiled = UtilitiesFuncions.ForceCollapseNewTile(ref charMatrix, ref positions);
+    if (fullTiled) break;
+
+    // Thread.Sleep(300);
 
 }
 
@@ -97,6 +67,9 @@ UtilitiesFuncions.PrintTiles(ref charMatrix, true);
 // Console.ResetColor();
 
 Console.WriteLine($"Cicli per gen:{cicles}");
+Console.WriteLine($"Chiamate al force collapse:{forceCollapseMethodCalls}");
+sw.Stop();
+Console.WriteLine($"Time of execution: {sw.Elapsed}");
 
 // //TEMP PRINT
 // for (int i = 0; i < entropyMatrix.GetLength(0); i++)
