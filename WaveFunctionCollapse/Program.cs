@@ -1,4 +1,5 @@
 
+using System.Collections;
 using System.Diagnostics;
 using WaveFunctionCollapse.Fnc;
 
@@ -10,14 +11,17 @@ const int matrixSize = 31;
 Console.WriteLine("--- Wave Function Collapse ---");
 Console.WriteLine("Inizializzazione in corso...");
 
-List<(int y, int x)> positions = new();
+// List<(int y, int x)> positions = new();
+PriorityQueue<(int y, int x), int> positions = new();
+Queue<(int y, int x)> collapsedCells = new();
 
 // char[,] charMatrix = new char[11, 11];
-int[,] entropyMatrix = new int[matrixSize, matrixSize];
+// int[,] entropyMatrix = new int[matrixSize, matrixSize];
 
 List<char>[,] charMatrix = new List<char>[matrixSize, matrixSize];
 
-UtilitiesFuncions.SetupEntropyMatrix(ref charMatrix, ref positions);
+(int y, int x) = UtilitiesFuncions.SetupEntropyMatrix(ref charMatrix, ref positions);
+collapsedCells.Enqueue((y, x));
 
 bool fullTiled = false;
 int tilesAdded = 0;
@@ -33,7 +37,8 @@ while (true)
     // Thread.Sleep(1000);
     cicles++;
 
-    UtilitiesFuncions.EditNearTiles(positions[0].y, positions[0].x, ref charMatrix);
+    collapsedCells.TryDequeue(out var cell);
+    UtilitiesFuncions.EditNearTiles(cell.y, cell.x, ref charMatrix, ref positions);
 
 
     UtilitiesFuncions.PrintTiles(ref charMatrix, true);
@@ -50,7 +55,7 @@ while (true)
     Console.WriteLine($"N° of pos:{posCount}");
     Console.WriteLine("BEFORE SECOND DELAY");
 
-    fullTiled = UtilitiesFuncions.ForceCollapseNewTile(ref charMatrix, ref positions);
+    fullTiled = UtilitiesFuncions.ForceCollapseNewTile(ref charMatrix, ref positions, ref collapsedCells);
     if (fullTiled) break;
 
     // Thread.Sleep(300);

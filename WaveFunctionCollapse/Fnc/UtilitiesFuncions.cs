@@ -1,10 +1,11 @@
+using System.Net;
 using WaveFunctionCollapse.Domain;
 
 namespace WaveFunctionCollapse.Fnc;
 
 public static class UtilitiesFuncions
 {
-    public static void EditNearTiles(int y, int x, ref List<char>[,] charMatrix)
+    public static void EditNearTiles(int y, int x, ref List<char>[,] charMatrix, ref PriorityQueue<(int y, int x), int> pos)
     {
         (int dy, int dx)[] directions = { (-1, 0), (1, 0), (0, -1), (0, 1) };
 
@@ -17,6 +18,15 @@ public static class UtilitiesFuncions
             int cy = currentCell.y;
             int cx = currentCell.x;
 
+            List<char> notAllowed = BiomeDef.mapBiome[charMatrix[cy, cx].FirstOrDefault()].NotAllowedBiomeChar.ToList();
+            for (int i = 1; i < charMatrix[cy, cx].Count; i++)
+            {
+                if (notAllowed.Count == 0) break;
+
+                var currentSet = new HashSet<char>(BiomeDef.mapBiome[charMatrix[cy, cx][i]].NotAllowedBiomeChar);
+                notAllowed.RemoveAll(bio => !currentSet.Contains(bio));
+            }
+
             foreach (var dir in directions)
             {
                 int neighborY = cy + dir.dy;
@@ -25,24 +35,20 @@ public static class UtilitiesFuncions
                 if ((neighborY >= 0 && neighborY < charMatrix.GetLength(0)) &&
                     neighborX >= 0 && neighborX < charMatrix.GetLength(1))
                 {
-                    bool optionsRemoved = ReduceEntropy(cy, cx, neighborY, neighborX, ref charMatrix);
+                    bool optionsRemoved = ReduceEntropy(neighborY, neighborX, ref charMatrix, notAllowed);
 
                     if (optionsRemoved)
                     {
                         propagationQueue.Enqueue((neighborY, neighborX));
+                        pos.Enqueue((neighborY, neighborX), charMatrix[neighborY, neighborX].Count);
                     }
                 }
             }
         }
     }
 
-    public static bool ReduceEntropy(int currentY, int currentX, int neighborY, int neighborX, ref List<char>[,] charMatrix)
+    public static bool ReduceEntropy(int neighborY, int neighborX, ref List<char>[,] charMatrix, List<char> notAllowed)
     {
-        if (charMatrix[currentY, currentX].Count != 1) return false;
-
-        char currentCellChar = charMatrix[currentY, currentX][0];
-        char[] notAllowed = BiomeDef.mapBiome[currentCellChar].NotAllowedBiomeChar;
-
         int biomesRemoved = charMatrix[neighborY, neighborX].RemoveAll(bio => notAllowed.Contains(bio));
 
         return biomesRemoved > 0;
@@ -84,57 +90,42 @@ public static class UtilitiesFuncions
         return changes;
     }
 
-    public static bool ForceCollapseNewTile(ref List<char>[,] charMatrix, ref List<(int y, int x)> pos)
+    public static bool ForceCollapseNewTile(ref List<char>[,] charMatrix, ref PriorityQueue<(int y, int x), int> pos, ref Queue<(int y, int x)> collapsedCells)
     {
-        // Heuristic Search /////////////////////////////////////////////
-        int minEntropy = int.MaxValue;
-        List<(int y, int x)> bestCells = new();
-
-        for (int i = 0; i < charMatrix.GetLength(0); i++)
+        int y = 0; int x = 0;
+        bool posNotEmpty = false;
+        while (pos.Count > 0)
         {
-            for (int j = 0; j < charMatrix.GetLength(1); j++)
-            {
-                int entropy = charMatrix[i, j].Count;
+            posNotEmpty = pos.TryDequeue(out var cell, out int recordedEntropy);
 
-                if (entropy <= 1) continue;
+            int realEntropy = charMatrix[cell.y, cell.x].Count;
 
-                if (entropy < minEntropy)
-                {
-                    minEntropy = entropy;
-                    bestCells.Clear();
-                    bestCells.Add((i, j));
-                }
-                else if (entropy == minEntropy)
-                {
-                    bestCells.Add((i, j));
-                }
-            }
+            if (realEntropy == 1 || realEntropy != recordedEntropy) continue;
+
+            y = cell.y;
+            x = cell.x;
+            break;
         }
-        // Heuristic Search /////////////////////////////////////////////
 
-        if (bestCells.Count == 0) return true;
+        if (!posNotEmpty) return true;
 
         Random rnd = new Random();
 
-        var pickedCell = bestCells[rnd.Next(bestCells.Count)];
-        int posY = pickedCell.y;
-        int posX = pickedCell.x;
+        int pickedBiomeIndex = rnd.Next(charMatrix[y, x].Count);
+        char biomeSelected = charMatrix[y, x][pickedBiomeIndex];
 
-        int pickedBiomeIndex = rnd.Next(minEntropy);
-        char biomeSelected = charMatrix[posY, posX][pickedBiomeIndex];
+        charMatrix[y, x].RemoveAll(bio => bio != biomeSelected);
 
-        charMatrix[posY, posX].RemoveAll(bio => bio != biomeSelected);
-
-        pos.Clear();
-        pos.Add((posY, posX));
+        collapsedCells.Enqueue((y, x));
 
         return false;
     }
 
-    public static void SetupEntropyMatrix(ref List<char>[,] charMatrix, ref List<(int y, int x)> pos)
+    public static (int y, int x) SetupEntropyMatrix(ref List<char>[,] charMatrix, ref PriorityQueue<(int y, int x), int> pos)
     {
         int charMatrixY_Length = charMatrix.GetLength(0);
         int charMatrixX_Length = charMatrix.GetLength(1);
+        Random rnd = new();
 
         for (int i = 0; i < charMatrixY_Length; i++)
         {
@@ -145,17 +136,17 @@ public static class UtilitiesFuncions
                 {
                     charMatrix[i, j].Add(item.Key);
                 }
+                pos.Enqueue((i, j), charMatrix[i, j].Count);
             }
 
         }
-
-        int centerY = charMatrixY_Length / 2;
-        int centerX = charMatrixX_Length / 2;
-
-        pos.Add((centerY, centerX));
+        int posY = rnd.Next(charMatrixY_Length);
+        int posX = rnd.Next(charMatrixX_Length);
 
         char pickedBiome = BiomeDef.GetRandomTile();
-        charMatrix[centerY, centerX].RemoveAll(b => b != pickedBiome);
+        charMatrix[posY, posX].RemoveAll(bio => bio != pickedBiome);
+
+        return (posY, posX);
     }
 
     public static void PrintTiles(ref List<char>[,] charMatrix, bool onlyTiled = false)
