@@ -1,7 +1,11 @@
 
 using System.Collections;
 using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
 using WaveFunctionCollapse.Fnc;
+
+using HttpClient httpClient = new HttpClient();
 
 Stopwatch sw = new();
 sw.Start();
@@ -11,12 +15,8 @@ const int matrixSize = 31;
 Console.WriteLine("--- Wave Function Collapse ---");
 Console.WriteLine("Inizializzazione in corso...");
 
-// List<(int y, int x)> positions = new();
 PriorityQueue<(int y, int x), int> positions = new();
 Queue<(int y, int x)> collapsedCells = new();
-
-// char[,] charMatrix = new char[11, 11];
-// int[,] entropyMatrix = new int[matrixSize, matrixSize];
 
 List<char>[,] charMatrix = new List<char>[matrixSize, matrixSize];
 
@@ -24,17 +24,13 @@ List<char>[,] charMatrix = new List<char>[matrixSize, matrixSize];
 collapsedCells.Enqueue((y, x));
 
 bool fullTiled = false;
-int tilesAdded = 0;
 
-int forceCollapseMethodCalls = 0;
 
 while (true)
 {
     Console.Clear();
 
     int posCount = positions.Count;
-    // Console.WriteLine($"BEFORE FIRST DELAY: POS => {posCount}");
-    // Thread.Sleep(1000);
     cicles++;
 
     collapsedCells.TryDequeue(out var cell);
@@ -42,18 +38,9 @@ while (true)
 
 
     UtilitiesFuncions.PrintTiles(ref charMatrix, true);
-    Console.WriteLine($"Tiles Added: {tilesAdded}");
-
-    // Console.BackgroundColor = ConsoleColor.Cyan;
-    // foreach (var pos in positions)
-    // {
-    //     Console.WriteLine(pos.ToString());
-    // }
-    // Console.ResetColor();
 
     Console.WriteLine($"Cicli per gen:{cicles}");
     Console.WriteLine($"N° of pos:{posCount}");
-    Console.WriteLine("BEFORE SECOND DELAY");
 
     fullTiled = UtilitiesFuncions.ForceCollapseNewTile(ref charMatrix, ref positions, ref collapsedCells);
     if (fullTiled) break;
@@ -62,29 +49,42 @@ while (true)
 
 }
 
+sw.Stop();
 Console.Clear();
 UtilitiesFuncions.PrintTiles(ref charMatrix, true);
-// Console.BackgroundColor = ConsoleColor.Cyan;
-// foreach (var pos in positions)
-// {
-//     Console.WriteLine(pos.ToString());
-// }
-// Console.ResetColor();
 
 Console.WriteLine($"Cicli per gen:{cicles}");
-Console.WriteLine($"Chiamate al force collapse:{forceCollapseMethodCalls}");
-sw.Stop();
 Console.WriteLine($"Time of execution: {sw.Elapsed}");
 
-// //TEMP PRINT
-// for (int i = 0; i < entropyMatrix.GetLength(0); i++)
-// {
-//     for (int j = 0; j < entropyMatrix.GetLength(1); j++)
-//     {
-//         Console.ForegroundColor = ConsoleColor.White;
-//         Console.Write($"|{entropyMatrix[i, j]}|");
-//         Console.ResetColor();
-//     }
+Thread.Sleep(1000);
+Console.WriteLine("Invio di info a Discord...");
+Thread.Sleep(1000);
 
-//     Console.WriteLine();
-// }
+string webHookUrl = "https://discord.com/api/webhooks/1534525559655239680/JpOOCYlv7bA4rPhygdYgnWypNIQxKmiKkSSOlU0rwJjcN0aJzoiTT4aRGmYxHoqDFiMk";
+
+var payload = new
+{
+    content = $"✅ **MATRICE GENERATA**\nDimensione Matrice: {matrixSize}x{matrixSize}\nCicli: {cicles}\nTempo di esecuzione : {sw.Elapsed}",
+    username = "WFC Engine - Map generator"
+};
+
+string jsonPayload = JsonSerializer.Serialize(payload);
+using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+try
+{
+    HttpResponseMessage response = await httpClient.PostAsync(webHookUrl, content);
+
+    if (response.IsSuccessStatusCode)
+    {
+        Console.WriteLine("Notifica inviata!");
+    }
+    else
+    {
+        Console.WriteLine($"Errore API Discord: {response.StatusCode}");
+    }
+}
+catch (Exception e)
+{
+    Console.WriteLine($"Connection error on discord: {e.Message}");
+}
