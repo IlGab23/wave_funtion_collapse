@@ -1,4 +1,3 @@
-
 using System.Collections;
 using System.Diagnostics;
 using System.Text;
@@ -6,12 +5,13 @@ using System.Text.Json;
 using WaveFunctionCollapse.Fnc;
 
 using HttpClient httpClient = new HttpClient();
+DotNetEnv.Env.Load();
 
 Stopwatch sw = new();
 sw.Start();
 int cicles = 0;
-const int matrixSize_y = 2042;
-const int matrixSize_x = 2042;
+const int matrixSize_y = 31;
+const int matrixSize_x = 31;
 int totalMatrixCells = matrixSize_y * matrixSize_x;
 
 Console.WriteLine("--- Wave Function Collapse ---");
@@ -34,7 +34,7 @@ bool fullTiled = false;
 
 while (true)
 {
-    // Console.Clear();
+    Console.Clear();
 
     cicles++;
 
@@ -42,7 +42,7 @@ while (true)
     bool isSuccess = UtilitiesFuncions.EditNearTiles(cell.y, cell.x, ref charMatrix, ref positions, ref biomesTileCount, totalMatrixCells);
 
 
-    // UtilitiesFuncions.PrintTiles(ref charMatrix, true);
+    UtilitiesFuncions.PrintTiles(ref charMatrix, true);
 
     if (!isSuccess)
     {
@@ -52,7 +52,7 @@ while (true)
         if (history.Count == 0)
         {
             Console.WriteLine("Errore critico irrisolvibile (vicolo cieco troppo profondo). RIAVVIO!");
-            Environment.Exit(1); 
+            Environment.Exit(1);
         }
 
         byte wrongBiome = charMatrix[cell.y, cell.x]; // Questo è il singolo bit rimasto
@@ -70,9 +70,9 @@ while (true)
     Console.WriteLine($"Cicli per gen:{cicles}");
 
     history.AddLast((byte[,])charMatrix.Clone());
-    if (history.Count > maxHistory) 
+    if (history.Count > maxHistory)
     {
-        history.RemoveFirst(); 
+        history.RemoveFirst();
     }
 
     fullTiled = UtilitiesFuncions.ForceCollapseNewTile(ref charMatrix, ref positions, ref collapsedCells, ref biomesTileCount);
@@ -85,7 +85,7 @@ while (true)
 UtilitiesFuncions.CleanUpMap(ref charMatrix);
 
 sw.Stop();
-Console.Clear();
+// Console.Clear();
 UtilitiesFuncions.PrintTiles(ref charMatrix, true);
 
 Console.WriteLine($"Cicli per gen:{cicles}");
@@ -101,7 +101,12 @@ Thread.Sleep(1000);
 Console.WriteLine("Invio di info a Discord...");
 Thread.Sleep(1000);
 
-string webHookUrl = "https://discord.com/api/webhooks/1534525559655239680/JpOOCYlv7bA4rPhygdYgnWypNIQxKmiKkSSOlU0rwJjcN0aJzoiTT4aRGmYxHoqDFiMk";
+string? webHookUrl = Environment.GetEnvironmentVariable("DISCORD_WEBHOOK_URL");
+if (string.IsNullOrEmpty(webHookUrl))
+{
+    Console.WriteLine("Discord webhook URL is not set in .env file.");
+    return;
+}
 
 var payload = new
 {
